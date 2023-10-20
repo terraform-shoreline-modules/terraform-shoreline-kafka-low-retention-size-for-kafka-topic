@@ -1,29 +1,13 @@
 {
   "name": "low_retention_size_for_kafka_topic",
-  "description": "This incident type refers to a situation where the retention size assigned to a Kafka topic is too low. Retention size is the duration for which the messages in a Kafka topic are retained. When the retention size is too low, it can cause the messages to be deleted from the topic before they can be consumed by the intended consumers. This can lead to data loss and disrupt the normal functioning of the application. It is important to set an appropriate retention size for each Kafka topic based on the requirements of the application.",
+  "description": "This incident type refers to an issue where the retention size for a Kafka topic is set too low. The retention size is the amount of time that Kafka retains messages in a topic before they are deleted. When the retention size is set too low, messages may be deleted before they can be consumed or processed, which can result in data loss or other issues. This can be caused by misconfiguration or changes in the data ingestion rate. It is important to monitor retention sizes and adjust them as necessary to prevent data loss and ensure smooth data processing.",
   "params": [
     {
-      "name": "ZOOKEEPER_HOST_PORT",
+      "name": "ZOOKEEPER_IP",
       "value": ""
     },
     {
-      "name": "NEW_RETENTION_SIZE_IN_MS",
-      "value": ""
-    },
-    {
-      "name": "PATH_TO_KAFKA_HOME",
-      "value": ""
-    },
-    {
-      "name": "PATH_TO_KAFKA_DATA_DIRECTORY",
-      "value": ""
-    },
-    {
-      "name": "ZOOKEEPER_SERVER",
-      "value": ""
-    },
-    {
-      "name": "CONSUMER_GROUP_NAME",
+      "name": "PATH_TO_KAFKA_CONFIG_FILE",
       "value": ""
     },
     {
@@ -31,19 +15,19 @@
       "value": ""
     },
     {
-      "name": "ZOOKEEPER_PORT",
+      "name": "GROUP_NAME",
+      "value": ""
+    },
+    {
+      "name": "KAFKA_BROKER_IP",
+      "value": ""
+    },
+    {
+      "name": "PORT",
       "value": ""
     },
     {
       "name": "NEW_RETENTION_SIZE",
-      "value": ""
-    },
-    {
-      "name": "NAME_OF_THE_KAFKA_TOPIC",
-      "value": ""
-    },
-    {
-      "name": "BROKER_HOST_PORT",
       "value": ""
     },
     {
@@ -64,79 +48,79 @@
       "name": "cell_1",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## Low Retention Size for Kafka Topic.\nThis incident type refers to a situation where the retention size assigned to a Kafka topic is too low. Retention size is the duration for which the messages in a Kafka topic are retained. When the retention size is too low, it can cause the messages to be deleted from the topic before they can be consumed by the intended consumers. This can lead to data loss and disrupt the normal functioning of the application. It is important to set an appropriate retention size for each Kafka topic based on the requirements of the application."
+      "content": "## Low Retention Size for Kafka Topic.\nThis incident type refers to an issue where the retention size for a Kafka topic is set too low. The retention size is the amount of time that Kafka retains messages in a topic before they are deleted. When the retention size is set too low, messages may be deleted before they can be consumed or processed, which can result in data loss or other issues. This can be caused by misconfiguration or changes in the data ingestion rate. It is important to monitor retention sizes and adjust them as necessary to prevent data loss and ensure smooth data processing."
     },
     {
       "name": "cell_2",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## 1. List all Kafka topics"
+      "content": "## Connect to the Kafka broker"
     },
     {
       "name": "cell_3",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `kafka-topics --zookeeper ${ZOOKEEPER_HOST_PORT} --list`"
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `kafka-console-consumer.sh --bootstrap-server ${KAFKA_BROKER_IP}:${PORT} --topic ${TOPIC_NAME} --from-beginning`"
     },
     {
       "name": "cell_4",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## 2. Get the retention size of a Kafka topic"
+      "content": "## View the current retention size for the topic"
     },
     {
       "name": "cell_5",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `kafka-configs --zookeeper ${ZOOKEEPER_HOST_PORT} --describe --entity-type topics --entity-name ${TOPIC_NAME} | grep retention.ms`"
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `kafka-topics.sh --describe --zookeeper ${ZOOKEEPER_IP}:${PORT} --topic ${TOPIC_NAME}`"
     },
     {
       "name": "cell_6",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## 4. Check if there are any consumers in a consumer group that are lagging behind"
+      "content": "## Check if there are any consumers for the topic"
     },
     {
       "name": "cell_7",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `kafka-consumer-groups --bootstrap-server ${BROKER_HOST_PORT} --describe --group ${CONSUMER_GROUP_NAME}`"
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `kafka-consumer-groups.sh --bootstrap-server ${KAFKA_BROKER_IP}:${PORT} --describe --group ${GROUP_NAME}`"
     },
     {
       "name": "cell_8",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## 5. Check the log size of a Kafka topic"
+      "content": "## View the current disk usage for the Kafka broker"
     },
     {
       "name": "cell_9",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `kafka-run-class kafka.tools.GetOffsetShell --broker-list ${BROKER_HOST_PORT} --topic ${TOPIC_NAME} --time -1 --offsets 1 | awk -F ':' '{sum += $3} END {print sum}'`"
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `df -h /path/to/kafka/dir`"
     },
     {
       "name": "cell_10",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## 6. Check the disk space usage of the Kafka brokers"
+      "content": "## Increase the retention size of the Kafka topic by modifying the configuration file."
     },
     {
       "name": "cell_11",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `df -h ${PATH_TO_KAFKA_DATA_DIRECTORY}`"
+      "content": "host | host_name=$HOST_NAME | invoke_modify_retention_size($PATH_TO_KAFKA_CONFIG_FILE, $TOPIC_NAME, $NEW_RETENTION_SIZE)"
     },
     {
       "name": "cell_12",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## Increase the retention size of the Kafka topic to prevent data loss and ensure that messages are retained for the required duration."
+      "content": "## Increase the retention size for the topic"
     },
     {
       "name": "cell_13",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "host | host_name=$HOST_NAME | invoke_increase_kafka_topic_retention_size($NEW_RETENTION_SIZE_IN_MS, $PATH_TO_KAFKA_HOME, $ZOOKEEPER_SERVER, $TOPIC_NAME, $ZOOKEEPER_PORT, $NEW_RETENTION_SIZE, $NAME_OF_THE_KAFKA_TOPIC)"
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `kafka-configs.sh --zookeeper ${ZOOKEEPER_IP}:${PORT} --alter --entity-type topics --entity-name ${TOPIC_NAME} --add-config retention.bytes=${NEW_RETENTION_SIZE}`"
     }
   ]
 }
